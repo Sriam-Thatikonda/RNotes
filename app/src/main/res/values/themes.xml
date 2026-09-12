@@ -1,0 +1,8 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme for r-notes. -->
+    <style name="Theme.Notoir" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Status bar and navigation bar will be handled by Jetpack Compose edge-to-edge -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>
