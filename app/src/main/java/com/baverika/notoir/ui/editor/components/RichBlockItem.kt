@@ -22,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,8 +35,11 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import kotlinx.coroutines.delay
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
@@ -64,17 +68,42 @@ fun RichBlockItem(
     onTextChanged: (String, TextRange) -> Unit,
     onFocusGained: (TextRange) -> Unit,
     onToggleChecked: (String) -> Unit,
-    onEnterPressed: () -> Unit,
+    onEnterPressed: (textBefore: String, textAfter: String) -> Unit,
     onBackspaceOnEmpty: () -> Unit,
+    targetCursorPosition: Int? = null,
     modifier: Modifier = Modifier
 ) {
     var textFieldValue by remember(block.id) {
-        mutableStateOf(TextFieldValue(text = block.text, selection = TextRange(block.text.length)))
+        val initialCursor = targetCursorPosition?.coerceIn(0, block.text.length) ?: block.text.length
+        mutableStateOf(TextFieldValue(text = block.text, selection = TextRange(initialCursor)))
     }
 
     // Keep internal text in sync if external changes occur
     if (textFieldValue.text != block.text) {
-        textFieldValue = textFieldValue.copy(text = block.text)
+        val newSelection = if (targetCursorPosition != null) {
+            TextRange(targetCursorPosition.coerceIn(0, block.text.length))
+        } else {
+            val start = textFieldValue.selection.start.coerceIn(0, block.text.length)
+            val end = textFieldValue.selection.end.coerceIn(start, block.text.length)
+            TextRange(start, end)
+        }
+        textFieldValue = textFieldValue.copy(text = block.text, selection = newSelection)
+    }
+
+    LaunchedEffect(targetCursorPosition) {
+        targetCursorPosition?.let { pos ->
+            val clamped = pos.coerceIn(0, textFieldValue.text.length)
+            textFieldValue = textFieldValue.copy(selection = TextRange(clamped))
+        }
+    }
+
+    LaunchedEffect(isFocused) {
+        if (isFocused) {
+            kotlinx.coroutines.delay(20)
+            try {
+                focusRequester.requestFocus()
+            } catch (_: Exception) {}
+        }
     }
 
     val visualTransformation = remember(block.spans, block.isChecked, block.type) {
@@ -147,8 +176,10 @@ fun RichBlockItem(
                     )
                 }
             }
-            BlockType.PARAGRAPH -> {
-                // No prefix
+            BlockType.PARAGRAPH,
+            BlockType.DIALOGUE,
+            BlockType.NARRATOR -> {
+                // No prefix for standard paragraphs
             }
         }
 
@@ -159,12 +190,14 @@ fun RichBlockItem(
             BasicTextField(
                 value = textFieldValue,
                 onValueChange = { newValue ->
-                    // Handle enter press from soft keyboard if newline is typed
-                    if (newValue.text.endsWith("\n") && !textFieldValue.text.endsWith("\n")) {
-                        val cleaned = newValue.text.removeSuffix("\n")
-                        textFieldValue = TextFieldValue(cleaned, TextRange(cleaned.length))
-                        onTextChanged(cleaned, TextRange(cleaned.length))
-                        onEnterPressed()
+                    // Handle enter press if newline is inserted
+                    if (newValue.text.contains('\n') && !textFieldValue.text.contains('\n')) {
+                        val newlineIndex = newValue.text.indexOf('\n')
+                        val before = newValue.text.substring(0, newlineIndex)
+                        val after = newValue.text.substring(newlineIndex + 1)
+                        textFieldValue = TextFieldValue(before, TextRange(before.length))
+                        onTextChanged(before, TextRange(before.length))
+                        onEnterPressed(before, after)
                     } else {
                         textFieldValue = newValue
                         onTextChanged(newValue.text, newValue.selection)
@@ -179,9 +212,24 @@ fun RichBlockItem(
                         }
                     }
                     .onKeyEvent { keyEvent ->
-                        if (keyEvent.key == Key.Backspace && textFieldValue.text.isEmpty()) {
-                            onBackspaceOnEmpty()
-                            true
+                        if (keyEvent.type == androidx.compose.ui.input.key.KeyEventType.KeyDown) {
+                            when {
+                                keyEvent.key == Key.Enter -> {
+                                    val text = textFieldValue.text
+                                    val cursor = textFieldValue.selection.start.coerceIn(0, text.length)
+                                    val before = text.substring(0, cursor)
+                                    val after = text.substring(cursor)
+                                    textFieldValue = TextFieldValue(before, TextRange(before.length))
+                                    onTextChanged(before, TextRange(before.length))
+                                    onEnterPressed(before, after)
+                                    true
+                                }
+                                keyEvent.key == Key.Backspace && textFieldValue.text.isEmpty() -> {
+                                    onBackspaceOnEmpty()
+                                    true
+                                }
+                                else -> false
+                            }
                         } else {
                             false
                         }
@@ -196,7 +244,10 @@ fun RichBlockItem(
                     imeAction = ImeAction.Default
                 ),
                 keyboardActions = KeyboardActions(
-                    onDone = { onEnterPressed() }
+                    onDone = {
+                        val text = textFieldValue.text
+                        onEnterPressed(text, "")
+                    }
                 )
             )
 
@@ -206,7 +257,9 @@ fun RichBlockItem(
                         BlockType.CHECKLIST -> "To-do item..."
                         BlockType.BULLET -> "List item..."
                         BlockType.NUMBERED -> "List item..."
-                        BlockType.PARAGRAPH -> "Type something..."
+                        BlockType.PARAGRAPH,
+                        BlockType.DIALOGUE,
+                        BlockType.NARRATOR -> "Type something..."
                     },
                     style = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),

@@ -14,6 +14,9 @@ data class Note(
     val displayTitle: String
         get() = if (title.isNotBlank()) title else "Untitled Note"
 
+    val isStoryNote: Boolean
+        get() = content.noteType == NoteType.STORY
+
     val isBlank: Boolean
         get() = title.isBlank() && content.blocks.all { it.text.isBlank() }
 }

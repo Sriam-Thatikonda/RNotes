@@ -2,11 +2,26 @@ package com.baverika.notoir.domain.model
 
 import java.util.UUID
 
+enum class NoteType {
+    STANDARD,
+    STORY
+}
+
+data class StoryCharacter(
+    val id: String = UUID.randomUUID().toString(),
+    val name: String,
+    val avatarEmoji: String = "👤",
+    val colorHex: String = "#6366F1",
+    val role: String? = null
+)
+
 enum class BlockType {
     PARAGRAPH,
     BULLET,
     NUMBERED,
-    CHECKLIST
+    CHECKLIST,
+    DIALOGUE,
+    NARRATOR
 }
 
 enum class SpanType {
@@ -34,7 +49,9 @@ data class RichBlock(
     val type: BlockType = BlockType.PARAGRAPH,
     val text: String = "",
     val isChecked: Boolean = false,
-    val spans: List<RichSpan> = emptyList()
+    val spans: List<RichSpan> = emptyList(),
+    val characterId: String? = null,
+    val parenthetical: String? = null
 ) {
     fun toggleChecked(): RichBlock {
         return if (type == BlockType.CHECKLIST) {
@@ -46,10 +63,25 @@ data class RichBlock(
 }
 
 data class RichContent(
-    val blocks: List<RichBlock> = listOf(RichBlock())
+    val blocks: List<RichBlock> = listOf(RichBlock()),
+    val noteType: NoteType = NoteType.STANDARD,
+    val characters: List<StoryCharacter> = emptyList()
 ) {
     fun toPlainText(): String {
-        return blocks.joinToString("\n") { it.text }
+        val charMap = characters.associateBy { it.id }
+        return blocks.joinToString("\n") { block ->
+            when (block.type) {
+                BlockType.DIALOGUE -> {
+                    val speaker = charMap[block.characterId]?.name ?: "Speaker"
+                    val action = if (!block.parenthetical.isNullOrBlank()) " (${block.parenthetical})" else ""
+                    "$speaker$action: ${block.text}"
+                }
+                BlockType.NARRATOR -> {
+                    "[${block.text}]"
+                }
+                else -> block.text
+            }
+        }
     }
 
     fun hasChecklists(): Boolean {

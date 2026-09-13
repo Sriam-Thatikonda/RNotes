@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
@@ -48,6 +49,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -94,6 +96,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+enum class NoteFilter {
+    ALL,
+    STANDARD,
+    STORY
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -101,6 +109,7 @@ fun HomeScreen(
     lockViewModel: LockViewModel,
     onNoteClick: (String) -> Unit,
     onCreateNoteClick: () -> Unit,
+    onCreateStoryClick: () -> Unit,
     onLockApp: () -> Unit
 ) {
     val context = LocalContext.current
@@ -123,6 +132,16 @@ fun HomeScreen(
 
     val isLockEnabled by lockViewModel.isLockEnabled.collectAsState()
     val isPasswordConfigured by lockViewModel.isPasswordConfigured.collectAsState()
+
+    var selectedFilter by remember { mutableStateOf(NoteFilter.ALL) }
+
+    val filteredNotes = remember(notes, selectedFilter) {
+        when (selectedFilter) {
+            NoteFilter.ALL -> notes
+            NoteFilter.STANDARD -> notes.filter { !it.isStoryNote }
+            NoteFilter.STORY -> notes.filter { it.isStoryNote }
+        }
+    }
 
     // SAF Document Launchers
     val exportLauncher = rememberLauncherForActivityResult(
@@ -330,180 +349,279 @@ fun HomeScreen(
             }
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onCreateNoteClick,
-                shape = RoundedCornerShape(18.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp),
-                icon = {
-                    Icon(
-                        imageVector = Icons.Rounded.Add,
-                        contentDescription = "New note"
-                    )
-                },
-                text = {
-                    Text(
-                        text = "New note",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Story Note FAB
+                ExtendedFloatingActionButton(
+                    onClick = onCreateStoryClick,
+                    shape = RoundedCornerShape(18.dp),
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 3.dp),
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Rounded.AutoStories,
+                            contentDescription = "New Story",
+                            modifier = Modifier.size(19.dp)
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = "Story",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                )
+
+                // Standard Note FAB
+                ExtendedFloatingActionButton(
+                    onClick = onCreateNoteClick,
+                    shape = RoundedCornerShape(18.dp),
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp),
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Rounded.Add,
+                            contentDescription = "New note"
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = "New note",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                )
+            }
         }
     ) { innerPadding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            when {
-                // Empty state when search produces 0 results
-                isSearchActive && notes.isEmpty() -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.SearchOff,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                            modifier = Modifier.size(56.dp)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "No notes found",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Try a different search term or check spelling.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                    }
+            // Filter Pills (All / Notes / Stories)
+            if (notes.isNotEmpty() && !isSearchActive) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = selectedFilter == NoteFilter.ALL,
+                        onClick = { selectedFilter = NoteFilter.ALL },
+                        label = { Text("All (${notes.size})") },
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    val standardCount = notes.count { !it.isStoryNote }
+                    FilterChip(
+                        selected = selectedFilter == NoteFilter.STANDARD,
+                        onClick = { selectedFilter = NoteFilter.STANDARD },
+                        label = { Text("Notes ($standardCount)") },
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    val storyCount = notes.count { it.isStoryNote }
+                    FilterChip(
+                        selected = selectedFilter == NoteFilter.STORY,
+                        onClick = { selectedFilter = NoteFilter.STORY },
+                        label = { Text("Stories ($storyCount)") },
+                        leadingIcon = {
+                            Icon(Icons.Rounded.AutoStories, contentDescription = null, modifier = Modifier.size(15.dp))
+                        },
+                        shape = RoundedCornerShape(12.dp)
+                    )
                 }
+            }
 
-                // Empty state on fresh install / 0 notes
-                notes.isEmpty() -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Box(
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f)
+            ) {
+                when {
+                    // Empty state when search produces 0 results
+                    isSearchActive && notes.isEmpty() -> {
+                        Column(
                             modifier = Modifier
-                                .size(72.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
-                            contentAlignment = Alignment.Center
+                                .fillMaxSize()
+                                .padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Rounded.Notes,
+                                imageVector = Icons.Rounded.SearchOff,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(32.dp)
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.size(56.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "No notes found",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Try a different search term or check spelling.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
                             )
                         }
-                        Spacer(modifier = Modifier.height(20.dp))
-                        Text(
-                            text = "No notes yet",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Capture an idea, task, or thought.\nYour notes stay completely private on this device.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        OutlinedButton(
-                            onClick = onCreateNoteClick,
-                            shape = RoundedCornerShape(14.dp)
+                    }
+
+                    // Empty state on fresh install / 0 notes
+                    notes.isEmpty() -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            Icon(Icons.Rounded.Add, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Create note")
+                            Box(
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Rounded.Notes,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Text(
+                                text = "No notes yet",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Capture an idea, dialogue, or thought.\nYour notes stay completely private on this device.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedButton(
+                                    onClick = onCreateNoteClick,
+                                    shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    Icon(Icons.Rounded.Add, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Create note")
+                                }
+                                OutlinedButton(
+                                    onClick = onCreateStoryClick,
+                                    shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    Icon(Icons.Rounded.AutoStories, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Create story")
+                                }
+                            }
                         }
                     }
-                }
 
-                // Responsive Grid Presentation
-                layoutMode == ViewLayoutMode.STAGGERED_GRID -> {
-                    LazyVerticalStaggeredGrid(
-                        columns = StaggeredGridCells.Fixed(2),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalItemSpacing = 12.dp,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(
-                            items = notes,
-                            key = { it.id }
-                        ) { note ->
-                            NoteCard(
-                                note = note,
-                                searchQuery = searchQuery,
-                                onClick = { onNoteClick(note.id) },
-                                onLongClick = {
-                                    viewModel.deleteNote(note) { msg ->
-                                        scope.launch {
-                                            val result = snackbarHostState.showSnackbar(
-                                                message = msg,
-                                                actionLabel = "Undo",
-                                                duration = SnackbarDuration.Short
-                                            )
-                                            if (result == SnackbarResult.ActionPerformed) {
-                                                viewModel.undoDelete()
-                                            }
-                                        }
-                                    }
-                                }
+                    // Filter produced 0 results
+                    filteredNotes.isEmpty() -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "No notes in this category",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
-                }
 
-                // Single Column List Presentation
-                else -> {
-                    LazyColumn(
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(
-                            items = notes,
-                            key = { it.id }
-                        ) { note ->
-                            NoteCard(
-                                note = note,
-                                searchQuery = searchQuery,
-                                onClick = { onNoteClick(note.id) },
-                                onLongClick = {
-                                    viewModel.deleteNote(note) { msg ->
-                                        scope.launch {
-                                            val result = snackbarHostState.showSnackbar(
-                                                message = msg,
-                                                actionLabel = "Undo",
-                                                duration = SnackbarDuration.Short
-                                            )
-                                            if (result == SnackbarResult.ActionPerformed) {
-                                                viewModel.undoDelete()
+                    // Responsive Grid Presentation
+                    layoutMode == ViewLayoutMode.STAGGERED_GRID -> {
+                        LazyVerticalStaggeredGrid(
+                            columns = StaggeredGridCells.Fixed(2),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalItemSpacing = 12.dp,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(
+                                items = filteredNotes,
+                                key = { it.id }
+                            ) { note ->
+                                NoteCard(
+                                    note = note,
+                                    searchQuery = searchQuery,
+                                    onClick = { onNoteClick(note.id) },
+                                    onLongClick = {
+                                        viewModel.deleteNote(note) { msg ->
+                                            scope.launch {
+                                                val result = snackbarHostState.showSnackbar(
+                                                    message = msg,
+                                                    actionLabel = "Undo",
+                                                    duration = SnackbarDuration.Short
+                                                )
+                                                if (result == SnackbarResult.ActionPerformed) {
+                                                    viewModel.undoDelete()
+                                                }
                                             }
                                         }
                                     }
-                                }
-                            )
+                                )
+                            }
+                        }
+                    }
+
+                    // Single Column List Presentation
+                    else -> {
+                        LazyColumn(
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(
+                                items = filteredNotes,
+                                key = { it.id }
+                            ) { note ->
+                                NoteCard(
+                                    note = note,
+                                    searchQuery = searchQuery,
+                                    onClick = { onNoteClick(note.id) },
+                                    onLongClick = {
+                                        viewModel.deleteNote(note) { msg ->
+                                            scope.launch {
+                                                val result = snackbarHostState.showSnackbar(
+                                                    message = msg,
+                                                    actionLabel = "Undo",
+                                                    duration = SnackbarDuration.Short
+                                                )
+                                                if (result == SnackbarResult.ActionPerformed) {
+                                                    viewModel.undoDelete()
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
                 }

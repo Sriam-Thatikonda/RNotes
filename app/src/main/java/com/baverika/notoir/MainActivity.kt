@@ -31,9 +31,15 @@ import com.baverika.notoir.ui.lock.LockViewModel
 import com.baverika.notoir.ui.lock.SetupPasswordScreen
 import com.baverika.notoir.ui.theme.NotoirTheme
 
+import com.baverika.notoir.domain.model.NoteType
+
 sealed interface Screen {
     data object Home : Screen
-    data class Editor(val noteId: String? = null, val instanceKey: String = java.util.UUID.randomUUID().toString()) : Screen
+    data class Editor(
+        val noteId: String? = null,
+        val initialNoteType: NoteType = NoteType.STANDARD,
+        val instanceKey: String = java.util.UUID.randomUUID().toString()
+    ) : Screen
 }
 
 class MainActivity : ComponentActivity() {
@@ -105,7 +111,10 @@ class MainActivity : ComponentActivity() {
                                                     currentScreen = Screen.Editor(noteId)
                                                 },
                                                 onCreateNoteClick = {
-                                                    currentScreen = Screen.Editor(null)
+                                                    currentScreen = Screen.Editor(null, NoteType.STANDARD)
+                                                },
+                                                onCreateStoryClick = {
+                                                    currentScreen = Screen.Editor(null, NoteType.STORY)
                                                 },
                                                 onLockApp = {
                                                     lockViewModel.lockNow()
@@ -117,7 +126,8 @@ class MainActivity : ComponentActivity() {
                                                 key = screen.instanceKey,
                                                 factory = EditorViewModel.Factory(
                                                     app.noteRepository,
-                                                    screen.noteId
+                                                    screen.noteId,
+                                                    screen.initialNoteType
                                                 )
                                             )
                                             EditorScreen(

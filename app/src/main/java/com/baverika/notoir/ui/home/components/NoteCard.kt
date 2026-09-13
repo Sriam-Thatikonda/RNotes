@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -21,9 +22,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.material.icons.rounded.CheckBox
 import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.PushPin
+import com.baverika.notoir.domain.model.BlockType
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -113,13 +116,36 @@ fun NoteCard(
                     Spacer(modifier = Modifier.width(8.dp))
                 }
 
-                if (note.isPinned) {
-                    Icon(
-                        imageVector = Icons.Rounded.PushPin,
-                        contentDescription = "Pinned",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (note.isStoryNote) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            modifier = Modifier.padding(end = 6.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Story",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 10.sp
+                                )
+                            }
+                        }
+                    }
+
+                    if (note.isPinned) {
+                        Icon(
+                            imageVector = Icons.Rounded.PushPin,
+                            contentDescription = "Pinned",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
 
@@ -146,16 +172,77 @@ fun NoteCard(
                 overflow = TextOverflow.Ellipsis
             )
 
+            if (note.isStoryNote && note.content.characters.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    note.content.characters.take(4).forEach { char ->
+                        val charColor = try {
+                            Color(android.graphics.Color.parseColor(char.colorHex))
+                        } catch (_: Exception) {
+                            MaterialTheme.colorScheme.primary
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(22.dp)
+                                .clip(CircleShape)
+                                .background(charColor.copy(alpha = 0.2f))
+                                .border(1.dp, charColor, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = char.avatarEmoji,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                    if (note.content.characters.size > 4) {
+                        Text(
+                            text = "+${note.content.characters.size - 4}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Bottom Metadata Row: Checklist Badge & Relative Time
+            // Bottom Metadata Row: Checklist Badge / Story dialogue stats & Relative Time
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Checklist badge if note has checklists
-                if (note.content.hasChecklists()) {
+                if (note.isStoryNote) {
+                    val dialogueCount = note.content.blocks.count { it.type == BlockType.DIALOGUE }
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.ChatBubbleOutline,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "$dialogueCount lines",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else if (note.content.hasChecklists()) {
                     val (done, total) = note.content.checklistStats()
                     Surface(
                         shape = RoundedCornerShape(8.dp),
