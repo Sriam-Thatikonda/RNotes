@@ -1,0 +1,128 @@
+:root {
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* Light Theme */
+  --color-bg: #F9F9FB;
+  --color-background: #F9F9FB;
+  --color-surface: #FFFFFF;
+  --color-surface-variant: #F1F1F4;
+  --color-surface-elevated: #FFFFFF;
+  --color-primary: #18181B;
+  --color-on-primary: #FFFFFF;
+  --color-secondary: #52525B;
+  --color-outline: #E4E4E7;
+  --color-outline-variant: #F4F4F5;
+  --color-on-surface: #09090B;
+  --color-on-surface-variant: #71717A;
+
+  /* Accents */
+  --accent-amber: #F59E0B;
+  --accent-red: #EF4444;
+  --accent-blue: #3B82F6;
+  --accent-green: #10B981;
+  --accent-purple: #8B5CF6;
+  --accent-teal: #14B8A6;
+
+  /* Note Colors - Light */
+  --note-default-container: #FFFFFF;
+  --note-default-border: #E4E4E7;
+  --note-blue-container: #F0F6FF;
+  --note-blue-border: #BFDBFE;
+  --note-green-container: #F0FDF4;
+  --note-green-border: #BBF7D0;
+  --note-amber-container: #FFFBEB;
+  --note-amber-border: #FDE68A;
+  --note-coral-container: #FEF2F2;
+  --note-coral-border: #FECACA;
+  --note-purple-container: #FAF5FF;
+  --note-purple-border: #DDD6FE;
+  --note-teal-container: #F0FDFA;
+  --note-teal-border: #99F6E4;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.08);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-card: 18px;
+  --radius-full: 9999px;
+}
+
+[data-theme="dark"] {
+  /* Dark Theme */
+  --color-bg: #0E0E11;
+  --color-background: #0E0E11;
+  --color-surface: #16161A;
+  --color-surface-variant: #222228;
+  --color-surface-elevated: #1C1C22;
+  --color-primary: #FAFAFA;
+  --color-on-primary: #09090B;
+  --color-secondary: #A1A1AA;
+  --color-outline: #2E2E36;
+  --color-outline-variant: #202026;
+  --color-on-surface: #F4F4F5;
+  --color-on-surface-variant: #A1A1AA;
+
+  /* Note Colors - Dark */
+  --note-default-container: #1C1C20;
+  --note-default-border: #2E2E34;
+  --note-blue-container: #172033;
+  --note-blue-border: #1E3A8A;
+  --note-green-container: #14291E;
+  --note-green-border: #065F46;
+  --note-amber-container: #2D2312;
+  --note-amber-border: #78350F;
+  --note-coral-container: #2E1517;
+  --note-coral-border: #7F1D1D;
+  --note-purple-container: #231738;
+  --note-purple-border: #4C1D95;
+  --note-teal-container: #132828;
+  --note-teal-border: #115E59;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--color-bg);
+  color: var(--color-on-surface);
+  line-height: 1.5;
+  overflow: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+input, textarea, button, select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-outline);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-secondary);
+}

@@ -13,3 +13,12 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Windows desktop application ignores
+windows/node_modules/
+windows/dist/
+windows/src-tauri/target/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
