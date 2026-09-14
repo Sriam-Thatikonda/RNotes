@@ -502,14 +502,17 @@
 }
 
 .dialogue-bubble-card {
-  min-width: 160px;
-  max-width: 520px;
-  padding: 10px 14px;
-  border-radius: 16px;
+  min-width: 280px;
+  width: clamp(320px, 80%, 1300px);
+  max-width: 90%;
+  padding: 12px 18px;
+  border-radius: 18px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   position: relative;
   display: flex;
   flex-direction: column;
+  transition: width 0.15s ease, max-width 0.15s ease;
+  box-sizing: border-box;
 }
 
 .dialogue-bubble-card.left {
@@ -613,7 +616,7 @@
 }
 
 .script-text-input {
-  max-width: 480px;
+  max-width: min(85%, 1100px);
   width: 100%;
   text-align: center;
   background: transparent;

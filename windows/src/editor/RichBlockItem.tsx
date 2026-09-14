@@ -25,12 +25,17 @@ export const RichBlockItem: React.FC<RichBlockItemProps> = ({
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-resize height
+  // Auto-resize height on text change and window resize
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
+    const adjustHeight = () => {
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      }
+    };
+    adjustHeight();
+    window.addEventListener('resize', adjustHeight);
+    return () => window.removeEventListener('resize', adjustHeight);
   }, [block.text]);
 
   useEffect(() => {
